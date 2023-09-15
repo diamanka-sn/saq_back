@@ -4,21 +4,23 @@ const { v4: uuidv4 } = require('uuidv4');
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Categories', {
+    await queryInterface.createTable('Images', {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4
       },
-      nom: {
+      url: {
         allowNull: false,
-        unique: true,
         type: Sequelize.STRING
       },
-      description: {
-        allowNull: false,
-        type: Sequelize.STRING
+      productId: {
+        type: Sequelize.UUID,
+        references: {
+          model: 'Products',
+          key: 'id'
+        }
       },
       createdAt: {
         allowNull: false,
@@ -31,6 +33,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Categories');
+    await queryInterface.dropTable('Images');
   }
 };

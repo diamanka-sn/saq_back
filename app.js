@@ -4,9 +4,8 @@ const bodyParse = require("body-parser");
 const path = require("path");
 const cors = require("cors");
 const cron = require("node-cron");
-const expireCarte = require("./Jobs/expirationCarteJob");
 
-const routesUtilisateur = require("./routes/userRoute");
+const routesUtilisateur = require("./routes/routeUser");
 
 
 app.use(cors());
@@ -30,6 +29,5 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 
 app.use("/user", routesUtilisateur);
-app.use("/poste", routesPoste);
 
 module.exports = app;

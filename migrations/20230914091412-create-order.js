@@ -1,35 +1,39 @@
 'use strict';
 const { v4: uuidv4 } = require('uuidv4');
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Products', {
+    await queryInterface.createTable('Orders', {
       id: {
         allowNull: false,
         primaryKey: true,
         type: Sequelize.UUID,
-        defaultValue: uuidv4()
+        defaultValue: Sequelize.UUIDV4
       },
-      nom: {
+      userId: {
         allowNull: false,
-        unique: true,
-        type: Sequelize.STRING
+        type: Sequelize.UUID,
+        references: {
+          model: 'Users',
+          key: 'id'
+        }
       },
-      description: {
+      productId: {
         allowNull: false,
-        type: Sequelize.STRING
-      },
-      prix: {
-        allowNull: false,
-        type: Sequelize.INTEGER
-      },
-      image: {
-        allowNull: false,
-        type: Sequelize.STRING
+        type: Sequelize.UUID,
+        references: {
+          model: 'Products',
+          key: 'id'
+        }
       },
       quantite: {
         allowNull: false,
         type: Sequelize.INTEGER
+      },
+      status: {
+        allowNull: false,
+        type: Sequelize.BOOLEAN
       },
       createdAt: {
         allowNull: false,
@@ -42,6 +46,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Products');
+    await queryInterface.dropTable('Orders');
   }
 };

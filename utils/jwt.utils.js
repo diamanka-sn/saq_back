@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 require('dotenv').config();
+const refreshSecret = crypto.randomBytes(64).toString('hex');
 
 module.exports = {
     generateTokenForUser: function (user) {

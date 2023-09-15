@@ -4,19 +4,32 @@ var models = require("../models");
 const { Op } = require('sequelize');
 const crypto = require('crypto');
 const Joi = require('joi');
+const messages = require("../utils/messages");
 
 const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
+const errorMessages = messages[0];
+const successMessages = messages[1];
 const generercode = () => {
     return crypto.randomBytes(4).toString('hex');
 }
 
-const codesDeReinitialisation = {}; 
+const codesDeReinitialisation = {};
 
 exports.inscription = async (req, res, next) => {
     try {
-
-        const { email, telephone } = req.body;
+        const {
+            email,
+            prenom,
+            nom,
+            sexe,
+            date_naissance,
+            password,
+            rue,
+            ville,
+            region,
+            telephone
+        } = req.body;
 
         if (!emailRegex.test(email)) {
             return res.status(400).json({ error: true, message: errorMessages.invalidEmail });
@@ -30,20 +43,70 @@ exports.inscription = async (req, res, next) => {
 
         if (user) {
             if (user.email === email) {
-                return res.status(200).json({ err: true, message: errorMessages.emailInUse, errorEmail: true });
+                return res.status(200).json({ error: true, message: errorMessages.emailInUse });
             } else {
-                return res.status(200).json({ err: true, message: errorMessages.phoneInUse, errorTelephone: true });
+                return res.status(200).json({ error: true, message: errorMessages.phoneInUse });
             }
         }
 
-        await models.User.create({
+        const hashedPassword = bcrypt.hashSync(password, 8);
 
+        await models.User.create({
+            email,
+            prenom,
+            nom,
+            sexe,
+            date_naissance,
+            password: hashedPassword,
+            rue,
+            ville,
+            region,
+            telephone,
+            isAdmin: false
         });
 
-        return res.status(200).json({ err: false, message: "" });
+        return res.status(200).json({ error: false, message: "Inscription effectuée avec succès" });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: errorMessages.unableToAdd });
+    }
+};
+
+exports.login = async (req, res) => {
+    const { email, password, telephone } = req.body;
+
+    try {
+        let user;
+
+        if (email) {
+            user = await models.User.findOne({
+                where: { email }
+            });
+        } else if (telephone) {
+            user = await models.User.findOne({
+                where: { telephone }
+            });
+        }
+
+        if (!user) {
+            return res.status(404).json({ error: true, message: errorMessages.passwordOrEmailIncorrect });
+        }
+
+        const passwordVerif = await bcrypt.compare(password, user.password);
+
+        if (!passwordVerif) {
+            return res.status(403).json({ error: true, message: errorMessages.passwordIncorrect });
+        }
+
+        return res.status(200).json({
+            userId: user.id,
+            email: user.email,
+            token: jwtUtils.generateTokenForUser(user)
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: true, message: errorMessages.connectionError });
     }
 };
 
@@ -100,12 +163,11 @@ exports.modifierPassword = async (req, res, next) => {
 exports.updateUser = async (req, res) => {
     const headerAuth = req.headers["authorization"];
     const userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId < 0) {
-        return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-    }
-
     try {
+
+        if (userId < 0) {
+            return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
+        }
         const user = await models.User.findByPk(id);
 
         if (!user) {
@@ -116,34 +178,58 @@ exports.updateUser = async (req, res) => {
             return res.status(401).json({ error: true, message: errorMessages.userNotAuthorize });
         }
 
-        const updatedFields = {
-            matricule: req.body.matricule,
+        User.prenom = req.body.prenom ? req.body.prenom : User.prenom
+        User.nom = req.body.nom
+        User.email = req.body.email
+        User.sexe = req.body.sexe
+        User.telephone = req.body.telephone;
+        User.date_naissance = req.body.date_naissance;
+        User.rue = req.body.rue;
+        User.ville = req.body.ville;
+        User.region = req.body.region;
 
-        };
+        const updatedUser = await User.save();
 
-        await user.update(updatedFields);
+        if (updatedUser) {
+            return res.status(200).json({ error: false, message: successMessages.successUpdate });
+        } else {
+            return res.status(500).json({ error: true, message: errorMessages.errorUserUpdate });
+        }
 
-        return res.status(200).json({ error: false, message: successMessages.successUpdate });
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ error: true, message: errorMessages.errorUserUpdate });
     }
 };
 
+
 exports.passwordOublié = async (req, res) => {
     try {
-        const user = await User.findOne({
-            where: {
-                email: req.body.email,
-            },
-        });
+        const { email, phone } = req.body;
+
+        let user;
+
+        if (email) {
+            user = await User.findOne({
+                where: {
+                    email: email,
+                },
+            });
+        } else if (phone) {
+            user = await User.findOne({
+                where: {
+                    phone: phone,
+                },
+            });
+        } else {
+            return res.status(400).json({ error: true, message: 'Veuillez fournir une adresse e-mail ou un numéro de téléphone' });
+        }
 
         if (!user) {
-            return res.status(404).json({ error: 'Cette adresse mail n\'existe pas' });
+            return res.status(404).json({ error: true, message: 'Cet utilisateur n\'existe pas' });
         }
 
         const code = genererCode();
-        const expiration = Date.now() + 15 * 60 * 1000; 
+        const expiration = Date.now() + 15 * 60 * 1000;
 
         codesDeReinitialisation[user.id] = {
             code: code,
@@ -163,17 +249,21 @@ exports.passwordOublié = async (req, res) => {
 
         const message = `<p>Bonjour ${user.prenom} ${user.nom}, </p>
         <p>Votre code de réinitialisation de mot de passe : <b>${code}</b></p>
-        <p>Cordialement,</p>
-        `;
+        <p>Cordialement,</p> `;
 
-        await envoyer.sendMail(user.email, '[Mot de passe] Code de réinitialisation', message);
+        if (email) {
+            await envoyer.sendMail(user.email, '[Mot de passe] Code de réinitialisation', message);
+        } else if (phone) {
+            //logique d'envoie de messages 
+        }
 
-        return res.status(200).json({ message: 'Email de réinitialisation du mot de passe est envoyé' });
+        return res.status(200).json({ error: false, message: 'Un code de réinitialisation a été envoyé' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Erreur au niveau du serveur' });
+        return res.status(500).json({ error: true, error: 'Erreur au niveau du serveur' });
     }
 };
+
 
 exports.verifierCode = async (req, res) => {
     try {
@@ -186,24 +276,24 @@ exports.verifierCode = async (req, res) => {
         });
 
         if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
+            return res.status(404).json({ error: true, message: 'Utilisateur non trouvé' });
         }
 
         const storedCode = codesDeReinitialisation[user.id];
 
         if (!storedCode || storedCode.code !== code) {
-            return res.status(404).json({ error: 'Code de réinitialisation incorrect' });
+            return res.status(404).json({ error: true, message: 'Code de réinitialisation incorrect' });
         }
 
         const now = Date.now();
 
         if (now > storedCode.expiration) {
-            return res.status(401).json({ error: 'Code de réinitialisation expiré' });
+            return res.status(401).json({ error: true, message: 'Code de réinitialisation expiré' });
         }
 
-        return res.status(200).json({ message: 'Code de réinitialisation valide' });
+        return res.status(200).json({ error: false, message: 'Code de réinitialisation valide' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: 'Erreur au niveau du serveur' });
+        return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });
     }
 };
