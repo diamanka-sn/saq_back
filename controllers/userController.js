@@ -1,22 +1,25 @@
-var bcrypt = require("bcrypt");
-var jwtUtils = require("../utils/jwt.utils");
-var models = require("../models");
+require('dotenv').config();
+const bcrypt = require("bcrypt");
+const jwtUtils = require("../utils/jwt.utils");
+const models = require("../models");
 const { Op } = require('sequelize');
 const crypto = require('crypto');
 const Joi = require('joi');
 const messages = require("../utils/messages");
-
+const { v1: uuidv1 } = require('uuid');
 const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
 const errorMessages = messages[0];
 const successMessages = messages[1];
-const generercode = () => {
-    return crypto.randomBytes(4).toString('hex');
-}
+const envoyer = require('../utils/sendMail');
+const User = models.User;
+const twilio = require('twilio');
+const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const min = 100000;
+const max = 999999;
 
-const codesDeReinitialisation = {};
 
-exports.inscription = async (req, res, next) => {
+exports.inscription = async (req, res) => {
     try {
         const {
             email,
@@ -35,7 +38,7 @@ exports.inscription = async (req, res, next) => {
             return res.status(400).json({ error: true, message: errorMessages.invalidEmail });
         }
 
-        const user = await models.User.findOne({
+        const user = await User.findOne({
             where: {
                 [Op.or]: [{ email }, { telephone }]
             }
@@ -51,7 +54,8 @@ exports.inscription = async (req, res, next) => {
 
         const hashedPassword = bcrypt.hashSync(password, 8);
 
-        await models.User.create({
+        await User.create({
+            id: uuidv1(),
             email,
             prenom,
             nom,
@@ -79,11 +83,11 @@ exports.login = async (req, res) => {
         let user;
 
         if (email) {
-            user = await models.User.findOne({
+            user = await User.findOne({
                 where: { email }
             });
         } else if (telephone) {
-            user = await models.User.findOne({
+            user = await User.findOne({
                 where: { telephone }
             });
         }
@@ -110,14 +114,14 @@ exports.login = async (req, res) => {
     }
 };
 
-exports.getOneUser = async (req, res, next) => {
+exports.getOneUser = async (req, res) => {
     const headerAuth = req.headers["authorization"];
     const userId = jwtUtils.getUserId(headerAuth);
 
     if (userId == -1) {
         return res.status(401).json({ error: true, messages: "User non authentifier" });
     }
-    const user = await models.User.findByPk(userId, {
+    const user = await User.findByPk(userId, {
         attributes: {
             exclude: ["password"],
         }
@@ -127,9 +131,9 @@ exports.getOneUser = async (req, res, next) => {
     } else {
         return res.status(401).json({ error: false, message: "User non trouvé" });
     }
-}
+};
 
-exports.modifierPassword = async (req, res, next) => {
+exports.modifierPassword = async (req, res) => {
     try {
         const donnees = req.body;
         const headerAuth = req.headers["authorization"];
@@ -139,7 +143,7 @@ exports.modifierPassword = async (req, res, next) => {
             return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
         }
 
-        const user = await models.User.findByPk(userId);
+        const user = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ error: true, message: errorMessages.userNotFound });
         }
@@ -150,7 +154,7 @@ exports.modifierPassword = async (req, res, next) => {
         }
 
         const hashedPassword = await bcrypt.hash(donnees.password, 8);
-        await models.User.update({ password: hashedPassword }, { where: { id: userId } });
+        await User.update({ password: hashedPassword }, { where: { id: userId } });
 
         return res.status(200).json({ error: false, message: successMessages.successUpdatePassword });
     } catch (error) {
@@ -159,16 +163,15 @@ exports.modifierPassword = async (req, res, next) => {
     }
 };
 
-
 exports.updateUser = async (req, res) => {
     const headerAuth = req.headers["authorization"];
     const userId = jwtUtils.getUserId(headerAuth);
-    try {
 
+    try {
         if (userId < 0) {
             return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
         }
-        const user = await models.User.findByPk(id);
+        const user = await User.findByPk(userId);
 
         if (!user) {
             return res.status(404).json({ error: true, message: errorMessages.userNotFound });
@@ -178,46 +181,42 @@ exports.updateUser = async (req, res) => {
             return res.status(401).json({ error: true, message: errorMessages.userNotAuthorize });
         }
 
-        User.prenom = req.body.prenom ? req.body.prenom : User.prenom
-        User.nom = req.body.nom
-        User.email = req.body.email
-        User.sexe = req.body.sexe
-        User.telephone = req.body.telephone;
-        User.date_naissance = req.body.date_naissance;
-        User.rue = req.body.rue;
-        User.ville = req.body.ville;
-        User.region = req.body.region;
+        user.prenom = req.body.prenom ? req.body.prenom : user.prenom;
+        user.nom = req.body.nom;
+        user.email = req.body.email;
+        user.sexe = req.body.sexe;
+        user.telephone = req.body.telephone;
+        user.date_naissance = req.body.date_naissance;
+        user.rue = req.body.rue;
+        user.ville = req.body.ville;
+        user.region = req.body.region;
 
-        const updatedUser = await User.save();
+        const updatedUser = await user.save();
 
         if (updatedUser) {
             return res.status(200).json({ error: false, message: successMessages.successUpdate });
         } else {
             return res.status(500).json({ error: true, message: errorMessages.errorUserUpdate });
         }
-
     } catch (error) {
         return res.status(500).json({ error: true, message: errorMessages.errorUserUpdate });
     }
 };
 
-
 exports.passwordOublié = async (req, res) => {
     try {
-        const { email, phone } = req.body;
-
+        const { email, telephone } = req.body;
         let user;
-
         if (email) {
             user = await User.findOne({
                 where: {
                     email: email,
                 },
             });
-        } else if (phone) {
+        } else if (telephone) {
             user = await User.findOne({
                 where: {
-                    phone: phone,
+                    telephone: telephone.trim(),
                 },
             });
         } else {
@@ -228,7 +227,8 @@ exports.passwordOublié = async (req, res) => {
             return res.status(404).json({ error: true, message: 'Cet utilisateur n\'existe pas' });
         }
 
-        const code = genererCode();
+        // const code = crypto.randomBytes(4).toString('hex');
+        const code = Math.floor(Math.random() * (max - min + 1)) + min;
         const expiration = Date.now() + 15 * 60 * 1000;
 
         codesDeReinitialisation[user.id] = {
@@ -236,34 +236,27 @@ exports.passwordOublié = async (req, res) => {
             expiration: expiration,
         };
 
-        await User.update(
-            {
-                code: code,
-            },
-            {
-                where: {
-                    id: user.id,
-                },
-            }
-        );
-
         const message = `<p>Bonjour ${user.prenom} ${user.nom}, </p>
         <p>Votre code de réinitialisation de mot de passe : <b>${code}</b></p>
         <p>Cordialement,</p> `;
 
         if (email) {
             await envoyer.sendMail(user.email, '[Mot de passe] Code de réinitialisation', message);
-        } else if (phone) {
-            //logique d'envoie de messages 
+        } else if (telephone) {
+            await client.messages.create({
+                body: `SAQ S U N U G A L \nVotre code de réinitialisation de mot de passe : ${code}`,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: telephone,
+                timeout: 60000,
+            });
         }
 
         return res.status(200).json({ error: false, message: 'Un code de réinitialisation a été envoyé' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: true, error: 'Erreur au niveau du serveur' });
+        return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });
     }
 };
-
 
 exports.verifierCode = async (req, res) => {
     try {
@@ -295,5 +288,27 @@ exports.verifierCode = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });
+    }
+};
+
+exports.allUser = async (req, res) => {
+    const headerAuth = req.headers["authorization"];
+    const userId = jwtUtils.getUserId(headerAuth);
+
+    if (userId < 0) {
+        return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
+    }
+    
+    const user = await User.findByPk(userId);
+
+    if (!user || !user.isAdmin) {
+        return res.status(404).json({ error: true, message: errorMessages.userNotFound });
+    }
+
+    try {
+        const users = await User.findAll();
+        return res.status(201).json(users);
+    } catch (err) {
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
 };

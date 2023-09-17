@@ -27,7 +27,8 @@ const errorMessages = {
   presentationNotFound: "Presentation non trouvée",
   publicationUpdateError: "Impossible de modifier cette publication",
   carteError: 'La carte spécifiée n\'existe pas ou a déjà été validée',
-  candidatureExiste: "vous avez deja candidater"
+  candidatureExiste: "vous avez deja candidater",
+  userNotAdmin: "Vous n'etes pas autorisé."
 };
 
 const successMessages = {
@@ -44,7 +45,7 @@ const successMessages = {
   invalidEmail: "Adresse e-mail invalide",
   emailInUse: "Cette adresse e-mail est déjà utilisée",
   phoneInUse: "Ce numéro de téléphone est déjà utilisé",
-  unableToAdd: "Impossible d'ajouter cette demande",
+  unableToAdd: "Veuillez reessayer",
   passwordOrEmailIncorrect: "Login ou mot de passe incorrect",
   passwordIncorrect: "Mot de passe incorrecte",
   connectionError: "Impossible de connecter l'User",

@@ -10,7 +10,6 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
       models.User.hasMany(models.Order)
     }
   }
@@ -27,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     rue: DataTypes.STRING,
     ville: DataTypes.STRING,
     region: DataTypes.STRING,
-    code: DataTypes.INTEGER,
+    code: DataTypes.STRING,
     isAdmin:DataTypes.BOOLEAN,
   }, {
     sequelize,
