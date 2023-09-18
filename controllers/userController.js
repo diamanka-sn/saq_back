@@ -18,6 +18,8 @@ const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUT
 const min = 100000;
 const max = 999999;
 
+const profileMulter = require('../middlewares/profileMulter')
+
 
 exports.inscription = async (req, res) => {
     try {
@@ -139,12 +141,8 @@ exports.modifierPassword = async (req, res) => {
         const headerAuth = req.headers["authorization"];
         const userId = jwtUtils.getUserId(headerAuth);
 
-        if (userId < 0) {
-            return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-        }
-
         const user = await User.findByPk(userId);
-        if (!user) {
+        if (!user || user.id !== userId) {
             return res.status(404).json({ error: true, message: errorMessages.userNotFound });
         }
 
@@ -292,23 +290,46 @@ exports.verifierCode = async (req, res) => {
 };
 
 exports.allUser = async (req, res) => {
-    const headerAuth = req.headers["authorization"];
-    const userId = jwtUtils.getUserId(headerAuth);
-
-    if (userId < 0) {
-        return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-    }
-    
-    const user = await User.findByPk(userId);
-
-    if (!user || !user.isAdmin) {
-        return res.status(404).json({ error: true, message: errorMessages.userNotFound });
-    }
-
     try {
         const users = await User.findAll();
         return res.status(201).json(users);
     } catch (err) {
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
+
+exports.addProfile = async (req, res) => {
+    const userId = jwtUtils.getUserId(req.headers["authorization"]);
+
+    try {
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: true, message: errorMessages.userNotFound });
+        }
+
+        if (user.id !== userId) {
+            return res.status(401).json({ error: true, message: errorMessages.userNotAuthorize });
+        }
+
+        profileMulter(req, res, async (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
+            }
+
+            user.image = req.file ? `${req.protocol}://${req.get('host')}/images/profile/${req.file.filename}` : null;
+
+            try {
+                await user.save();
+                return res.status(200).json({ error: false, message: "Profil mis à jour avec succès" });
+            } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: true, message: "Erreur serveur" });
+            }
+        });
+    } catch (error) {
+        console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
 };

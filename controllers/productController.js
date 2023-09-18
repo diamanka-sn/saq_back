@@ -4,6 +4,7 @@ const { Product, Categorie, Image } = require("../models");
 const jwtUtils = require("../utils/jwt.utils");
 const messages = require("../utils/messages");
 const errorMessages = messages[0];
+const productMulter = require("../middlewares/multer");
 
 const checkUserIsAdmin = async (userId) => {
     const user = await User.findByPk(userId);
@@ -12,12 +13,6 @@ const checkUserIsAdmin = async (userId) => {
 
 exports.addProduit = async (req, res, next) => {
     try {
-        const headerAuth = req.headers["authorization"];
-        const userId = jwtUtils.getUserId(headerAuth);
-
-        if (!userId || !(await checkUserIsAdmin(userId))) {
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-        }
 
         const { nom, description, prix, quantite, categorie } = req.body;
         const foundCategory = await Categorie.findOne({ where: { nom: categorie } });
@@ -35,21 +30,28 @@ exports.addProduit = async (req, res, next) => {
             categorieId: foundCategory.id,
         });
 
-        if (req.files && req.files.length > 0) {
-            const imageUrls = [];
-
-            for (const file of req.files) {
-                const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
-                imageUrls.push(imageUrl);
-
-                await Image.create({
-                    productId: produit.id,
-                    url: imageUrl,
-                });
+        productMulter(req, res, async (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
             }
-        }
 
-        return res.status(200).json({ error: false, message: "Produit ajouté avec succès" });
+            if (req.files && req.files.length > 0) {
+                const imageUrls = [];
+
+                for (const file of req.files) {
+                    const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
+                    imageUrls.push(imageUrl);
+
+                    await Image.create({
+                        productId: produit.id,
+                        url: imageUrl,
+                    });
+                }
+            }
+
+            return res.status(200).json({ error: false, message: "Produit ajouté avec succès" });
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur" });
@@ -140,23 +142,30 @@ exports.updateProduit = async (req, res, next) => {
         produit.quantite = quantite;
         produit.categorieId = foundCategory.id;
 
-        if (req.files && req.files.length > 0) {
-            const imageUrls = [];
-
-            for (const file of req.files) {
-                const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
-                imageUrls.push(imageUrl);
-
-                await Image.create({
-                    productId: produit.id,
-                    url: imageUrl,
-                });
+        productMulter(req, res, async (err) => {
+            if (err) {
+                console.error(err);
+                return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
             }
-        }
 
-        await produit.save();
+            if (req.files && req.files.length > 0) {
+                const imageUrls = [];
 
-        return res.status(200).json({ error: false, message: "Produit mis à jour avec succès" });
+                for (const file of req.files) {
+                    const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
+                    imageUrls.push(imageUrl);
+
+                    await Image.create({
+                        productId: produit.id,
+                        url: imageUrl,
+                    });
+                }
+            }
+
+            await produit.save();
+
+            return res.status(200).json({ error: false, message: "Produit mis à jour avec succès" });
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur" });

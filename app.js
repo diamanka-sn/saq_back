@@ -6,6 +6,7 @@ const cors = require("cors");
 const cron = require("node-cron");
 
 const routesUtilisateur = require("./routes/routeUser");
+const routesProduct = require("./routes/routeProduct");
 
 
 app.use(cors());
@@ -29,5 +30,6 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 
 app.use("/user", routesUtilisateur);
+app.use("/product", routesProduct);
 
 module.exports = app;
