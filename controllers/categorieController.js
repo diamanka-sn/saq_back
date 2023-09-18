@@ -1,24 +1,10 @@
-const jwtUtils = require("../utils/jwt.utils");
-const { Op } = require('sequelize');
 const { v1: uuidv1 } = require('uuid');
-const { Product, Categorie, User } = require("../models");
-const messages = require("../utils/messages");
-const errorMessages = messages[0];
+const { Product, Categorie } = require("../models");
 
-const checkUserIsAdmin = async (userId) => {
-    const user = await User.findByPk(userId);
-    return user && user.isAdmin;
-};
 
 exports.addCategorie = async (req, res) => {
-    const userId = jwtUtils.getUserId(req.headers["authorization"]);
-
     try {
-        if (!userId) return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-
-        if (!(await checkUserIsAdmin(userId)))
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-
+       
         const { nom, description } = req.body;
 
         const existingCategory = await Categorie.findOne({ where: { nom } });
@@ -36,15 +22,9 @@ exports.addCategorie = async (req, res) => {
 };
 
 exports.updateCategorie = async (req, res) => {
-    const userId = jwtUtils.getUserId(req.headers["authorization"]);
     const categoryId = req.params.id;
 
     try {
-        if (!userId) return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-
-        if (!(await checkUserIsAdmin(userId)))
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-
         const categorie = await Categorie.findByPk(categoryId);
 
         if (!categorie)
@@ -69,14 +49,7 @@ exports.updateCategorie = async (req, res) => {
 
 exports.getOneCategory = async (req, res) => {
     const categoryId = req.params.id;
-    const userId = jwtUtils.getUserId(req.headers["authorization"]);
-
     try {
-        if (!userId) return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-
-        if (!(await checkUserIsAdmin(userId)))
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-
         const category = await Categorie.findByPk(categoryId, {
             include: {
                 model: Product,
@@ -95,14 +68,7 @@ exports.getOneCategory = async (req, res) => {
 };
 
 exports.getCategories = async (req, res) => {
-    const userId = jwtUtils.getUserId(req.headers["authorization"]);
-
     try {
-        if (!userId) return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-
-        if (!(await checkUserIsAdmin(userId)))
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-
         const categories = await Categorie.findAll({
             include: {
                 model: Product,

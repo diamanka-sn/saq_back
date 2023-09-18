@@ -23,18 +23,7 @@ const profileMulter = require('../middlewares/profileMulter')
 
 exports.inscription = async (req, res) => {
     try {
-        const {
-            email,
-            prenom,
-            nom,
-            sexe,
-            date_naissance,
-            password,
-            rue,
-            ville,
-            region,
-            telephone
-        } = req.body;
+        const { email, prenom, nom, sexe, date_naissance, password, rue, ville, region, telephone } = req.body;
 
         if (!emailRegex.test(email)) {
             return res.status(400).json({ error: true, message: errorMessages.invalidEmail });
@@ -120,9 +109,6 @@ exports.getOneUser = async (req, res) => {
     const headerAuth = req.headers["authorization"];
     const userId = jwtUtils.getUserId(headerAuth);
 
-    if (userId == -1) {
-        return res.status(401).json({ error: true, messages: "User non authentifier" });
-    }
     const user = await User.findByPk(userId, {
         attributes: {
             exclude: ["password"],
@@ -166,18 +152,7 @@ exports.updateUser = async (req, res) => {
     const userId = jwtUtils.getUserId(headerAuth);
 
     try {
-        if (userId < 0) {
-            return res.status(401).json({ error: true, message: errorMessages.userNoAuthentified });
-        }
         const user = await User.findByPk(userId);
-
-        if (!user) {
-            return res.status(404).json({ error: true, message: errorMessages.userNotFound });
-        }
-
-        if (user.id !== userId) {
-            return res.status(401).json({ error: true, message: errorMessages.userNotAuthorize });
-        }
 
         user.prenom = req.body.prenom ? req.body.prenom : user.prenom;
         user.nom = req.body.nom;
@@ -303,14 +278,6 @@ exports.addProfile = async (req, res) => {
 
     try {
         const user = await User.findByPk(userId);
-
-        if (!user) {
-            return res.status(404).json({ error: true, message: errorMessages.userNotFound });
-        }
-
-        if (user.id !== userId) {
-            return res.status(401).json({ error: true, message: errorMessages.userNotAuthorize });
-        }
 
         profileMulter(req, res, async (err) => {
             if (err) {

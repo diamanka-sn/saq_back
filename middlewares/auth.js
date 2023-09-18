@@ -12,7 +12,7 @@ module.exports = async (req, res, next) => {
 
         const user = await User.findByPk(userId);
 
-        if (!user) {
+        if (!user || user.id!==userId) {
             return res.status(403).json({ error: true, message: "Vous n'êtes pas autorisé à accéder à cette ressource" });
         }
 
