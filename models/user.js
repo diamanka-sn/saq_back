@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       models.User.hasMany(models.Order)
+      models.User.hasOne(models.Note)
     }
   }
   User.init({
@@ -26,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
     rue: DataTypes.STRING,
     ville: DataTypes.STRING,
     region: DataTypes.STRING,
-    code: DataTypes.STRING,
     isAdmin:DataTypes.BOOLEAN,
   }, {
     sequelize,

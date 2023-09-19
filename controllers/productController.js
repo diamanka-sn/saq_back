@@ -1,59 +1,54 @@
 require('dotenv').config();
 const { v1: uuidv1 } = require('uuid');
-const { Product, Categorie, Image } = require("../models");
-const jwtUtils = require("../utils/jwt.utils");
-const messages = require("../utils/messages");
-const errorMessages = messages[0];
+const { Product, Categorie } = require("../models");
 const productMulter = require("../middlewares/multer");
-
-const checkUserIsAdmin = async (userId) => {
-    const user = await User.findByPk(userId);
-    return user && user.isAdmin;
-};
 
 exports.addProduit = async (req, res, next) => {
     try {
-
         const { nom, description, prix, quantite, categorie } = req.body;
+        const productFound = await Product.findOne({ where: { nom: nom } })
+        if (productFound) {
+            console.log(productFound)
+            return res.status(400).json({ error: true, message: "Produit existe déjà." });
+        }
         const foundCategory = await Categorie.findOne({ where: { nom: categorie } });
 
         if (!foundCategory) {
             return res.status(400).json({ error: true, message: "Catégorie non trouvée" });
         }
 
-        const produit = await Product.create({
-            id: uuidv1(),
-            nom,
-            description,
-            prix,
-            quantite,
-            categorieId: foundCategory.id,
-        });
-
         productMulter(req, res, async (err) => {
             if (err) {
                 console.error(err);
                 return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
             }
+            const imageUrls = "";
 
-            if (req.files && req.files.length > 0) {
-                const imageUrls = [];
+            await Product.create({
+                id: uuidv1(),
+                nom,
+                description,
+                prix,
+                quantite,
+                url: req.file ? `${req.protocol}://${req.get('host')}/images/products/${file.filename}` : "",
+                categorieId: foundCategory.id,
+            });
 
-                for (const file of req.files) {
-                    const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
-                    imageUrls.push(imageUrl);
+            // if (req.files && req.files.length > 0) {
+            //     for (const file of req.files) {
+            //         const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}` + ',';
+            //         imageUrls += imageUrl
+            //         //    await imageUrls.push(imageUrl);
+            //     }
+            // } else {
+            //     console.log("Pas d'image")
+            // }
 
-                    await Image.create({
-                        productId: produit.id,
-                        url: imageUrl,
-                    });
-                }
-            }
 
             return res.status(200).json({ error: false, message: "Produit ajouté avec succès" });
         });
     } catch (error) {
-        console.error(error);
+        console.log(error)
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
 };
@@ -72,11 +67,7 @@ exports.getProducts = async (req, res) => {
                     model: Categorie,
                     as: 'categorie',
                     attributes: ['nom'],
-                },
-                {
-                    model: Image,
-                    attributes: ['url'],
-                },
+                }
             ],
         });
 
@@ -95,11 +86,7 @@ exports.getOneProduct = async (req, res) => {
                     model: Categorie,
                     as: 'categorie',
                     attributes: ['nom'],
-                },
-                {
-                    model: Image,
-                    attributes: ['url'],
-                },
+                }
             ],
         });
 
@@ -116,13 +103,6 @@ exports.getOneProduct = async (req, res) => {
 
 exports.updateProduit = async (req, res, next) => {
     try {
-        const headerAuth = req.headers["authorization"];
-        const userId = jwtUtils.getUserId(headerAuth);
-
-        if (!userId || !(await checkUserIsAdmin(userId))) {
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-        }
-
         const { nom, description, prix, quantite, categorie } = req.body;
         const foundCategory = await Categorie.findOne({ where: { nom: categorie } });
 
@@ -136,31 +116,31 @@ exports.updateProduit = async (req, res, next) => {
             return res.status(404).json({ error: true, message: "Produit non trouvé" });
         }
 
-        produit.nom = nom;
-        produit.description = description;
-        produit.prix = prix;
-        produit.quantite = quantite;
-        produit.categorieId = foundCategory.id;
+
 
         productMulter(req, res, async (err) => {
             if (err) {
                 console.error(err);
                 return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
             }
+            const imageUrls = [];
+
 
             if (req.files && req.files.length > 0) {
-                const imageUrls = [];
 
                 for (const file of req.files) {
                     const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
                     imageUrls.push(imageUrl);
-
-                    await Image.create({
-                        productId: produit.id,
-                        url: imageUrl,
-                    });
                 }
+            } else {
+                console.log("Pas d'image")
             }
+            produit.nom = nom;
+            produit.description = description;
+            produit.prix = prix;
+            produit.quantite = quantite;
+            produit.categorieId = foundCategory.id;
+            produit.url = imageUrls
 
             await produit.save();
 
@@ -174,20 +154,12 @@ exports.updateProduit = async (req, res, next) => {
 
 exports.deleteProduit = async (req, res, next) => {
     try {
-        const headerAuth = req.headers["authorization"];
-        const userId = jwtUtils.getUserId(headerAuth);
-
-        if (!userId || !(await checkUserIsAdmin(userId))) {
-            return res.status(403).json({ error: true, message: errorMessages.userNotAdmin });
-        }
-
         const produit = await Product.findByPk(req.params.id);
 
         if (!produit) {
             return res.status(404).json({ error: true, message: "Produit non trouvé" });
         }
 
-        await Image.destroy({ where: { productId: produit.id } });
         await produit.destroy();
 
         return res.status(200).json({ error: false, message: "Produit supprimé avec succès" });

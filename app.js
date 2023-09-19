@@ -7,6 +7,7 @@ const cron = require("node-cron");
 
 const routesUtilisateur = require("./routes/routeUser");
 const routesProduct = require("./routes/routeProduct");
+const routesCategories = require("./routes/routeCategorie");
 
 
 app.use(cors());
@@ -31,5 +32,6 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use("/user", routesUtilisateur);
 app.use("/product", routesProduct);
+app.use("/categorie", routesCategories);
 
 module.exports = app;
