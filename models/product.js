@@ -16,7 +16,7 @@ module.exports = (sequelize, DataTypes) => {
         }
       })
       models.Product.hasMany(models.Order)
-      models.Product.hasOne(models.Note)
+      models.Product.hasMany(models.Note)
 
     }
   }

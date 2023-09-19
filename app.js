@@ -4,10 +4,13 @@ const bodyParse = require("body-parser");
 const path = require("path");
 const cors = require("cors");
 const cron = require("node-cron");
-
+const auth = require('./middlewares/auth')
 const routesUtilisateur = require("./routes/routeUser");
 const routesProduct = require("./routes/routeProduct");
 const routesCategories = require("./routes/routeCategorie");
+const routesOrder = require("./routes/routeOrder");
+const routesNote = require("./routes/routeNote");
+const authAdmin = require("./middlewares/authAdmin");
 
 
 app.use(cors());
@@ -32,6 +35,8 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use("/user", routesUtilisateur);
 app.use("/product", routesProduct);
-app.use("/categorie", routesCategories);
+app.use("/categorie", authAdmin, routesCategories);
+app.use("/note", auth, routesNote)
+app.use("/order", auth, routesOrder)
 
 module.exports = app;

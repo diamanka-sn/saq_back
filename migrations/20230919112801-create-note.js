@@ -12,7 +12,7 @@ module.exports = {
       },
       userId: {
         allowNull: false,
-        type:Sequelize.UUID,
+        type: Sequelize.UUID,
         references: {
           model: 'Users',
           key: 'id'
@@ -28,10 +28,10 @@ module.exports = {
       },
       note: {
         allowNull: false,
-        type: Sequelize.NUMBER
+        type: Sequelize.SMALLINT
       },
       avis: {
-        allowNull:true,
+        allowNull: true,
         type: Sequelize.TEXT
       },
       createdAt: {

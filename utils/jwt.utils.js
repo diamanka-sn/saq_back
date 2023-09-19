@@ -7,7 +7,7 @@ module.exports = {
         return jwt.sign({
             id: user.id,
             email: user.email,
-            statut: user.statut
+            isAdmin: user.isAdmin
         },
             process.env.JWT_SIGN_SECRET,
             {
@@ -28,10 +28,10 @@ module.exports = {
     getUserId: function (authorization) {
         var userId = -1;
         var token = module.exports.parseAuthorization(authorization);
-        if (token != null) {
+        if (token !== null) {
             try {
                 var jwtToken = jwt.verify(token, process.env.JWT_SIGN_SECRET);
-                if (jwtToken != null)
+                if (jwtToken !== null)
                     userId = jwtToken.id;
             } catch (err) {
                 return userId
@@ -39,7 +39,6 @@ module.exports = {
         }
         return userId;
     },
-
     validateUser: function (user) {
         const schema = Joi.object({
             email: Joi.string().email().required(),

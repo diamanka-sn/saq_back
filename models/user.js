@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       models.User.hasMany(models.Order)
-      models.User.hasOne(models.Note)
+      models.User.hasMany(models.Note)
     }
   }
   User.init({

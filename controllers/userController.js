@@ -45,7 +45,7 @@ exports.inscription = async (req, res) => {
 
         const hashedPassword = bcrypt.hashSync(password, 8);
 
-        await User.create({
+        const u = await User.create({
             id: uuidv1(),
             email,
             prenom,
@@ -59,11 +59,15 @@ exports.inscription = async (req, res) => {
             telephone,
             isAdmin: false
         });
-
-        return res.status(200).json({ error: false, message: "Inscription effectuée avec succès" });
+        var s = {
+            userId: u.id,
+            email: u.email,
+            token: jwtUtils.generateTokenForUser(u)
+        }
+        return res.status(200).json({ error: false, s});
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ error: true, message: errorMessages.unableToAdd });
+        return res.status(500).json({ error: true, message: "Erreur inatendu, veuillez reessayer" });
     }
 };
 
