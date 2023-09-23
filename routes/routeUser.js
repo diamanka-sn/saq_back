@@ -12,5 +12,6 @@ routes.post('/update',auth, controller.modifierPassword)
 routes.post('/code', controller.passwordOublié)
 routes.post('/verify', controller.verifierCode)
 routes.get('/allUsers', authAdmin, controller.allUser)
+routes.post('/profil', auth, controller.addProfile)
 
 module.exports = routes

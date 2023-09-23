@@ -2,55 +2,200 @@ const { v1: uuidv1 } = require('uuid');
 const { Product, Order } = require("../models");
 
 
-exports.ajouterPanier = async (req, res, next) => {
-    const headerAuth = req.headers["authorization"];
-    const userId = jwtUtils.getUserId(headerAuth);
-    const productId = req.params.id
+exports.ajouterPanier = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+        const productId = req.params.id;
 
-    const product = await Product.findByPk(productId)
-    if (!product) {
-        return res.status(403).json({ error: true, message: "Produit n'est pas disponible." })
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            return res.status(404).json({ error: true, message: "Produit n'est pas disponible." });
+        }
+
+        const order = await Order.create({
+            id: uuidv1(),
+            productId: productId,
+            userId: userId,
+            ...req.body,
+            status: false
+        });
+
+        return res.status(201).json({ error: false, message: "Produit ajouté au panier avec succès", order: order });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
+};
 
-    await Order.create({
-        id: uuidv1(),
-        productId: productId,
-        userId: userId,
-        ...req.body
-    })
-}
+exports.getPanier = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
 
-exports.modifierPanier = async (req, res, next) => {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
 
-}
+        const panier = await Order.findAndCountAll({
+            where: {
+                userId: userId,
+                status: false
+            },
+            include: [
+                {
+                    model: Product
+                }
+            ],
+            limit: limit,
+            offset: offset
+        });
 
-exports.supprimerPanier = async (req, res, next) => {
+        return res.status(200).json({ error: false, panier });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
 
-}
+exports.modifierPanier = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+        const productId = req.params.id;
 
-exports.getHistorique = async (req, res, next) => {
-    const headerAuth = req.headers["authorization"];
-    const userId = jwtUtils.getUserId(headerAuth);
-    const historiques = await Order.findAndCountAll({
-        limit: limit,
-        offset: offset,
-        include: [
-            {
-                model: Product,
-            }, {
-                user
+        const commande = await Order.findOne({
+            where: {
+                userId: userId,
+                productId: productId,
+                status: false
             }
-        ],
-    });
-}
+        });
 
-exports.validerPanier = async (req, res, next) => {
-    const headerAuth = req.headers["authorization"];
-    const userId = jwtUtils.getUserId(headerAuth);
+        if (!commande) {
+            return res.status(404).json({ error: true, message: "Commande non trouvée dans le panier." });
+        }
 
-    
-}
+        const nouvelleQuantite = req.body.quantite;
 
-exports.noterProduct = async (req, res, next) => {
+        if (nouvelleQuantite >= 0) {
+            commande.quantite = nouvelleQuantite;
+        }
 
-}
+        await commande.save();
+
+        return res.status(200).json({ error: false, message: "Commande modifiée avec succès." });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
+
+exports.supprimerPanier = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+        const productId = req.params.id;
+
+        const order = await Order.findOne({
+            where: {
+                userId: userId,
+                productId: productId,
+                status: false
+            }
+        });
+
+        if (!order) {
+            return res.status(404).json({ error: true, message: "Produit non trouvé dans le panier." });
+        }
+
+        await order.destroy();
+
+        return res.status(200).json({ error: false, message: "Produit supprimé du panier avec succès." });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
+
+exports.getHistorique = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const historiques = await Order.findAndCountAll({
+            where: {
+                userId: userId,
+                status: true
+            },
+            include: [
+                {
+                    model: Product
+                }
+            ],
+            limit: limit,
+            offset: offset
+        });
+
+        return res.status(200).json({ error: false, historiques: historiques.rows, totalItems: historiques.count });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
+
+exports.validerPanier = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+
+        const panier = await Order.findAll({
+            where: {
+                userId: userId,
+                status: false
+            }
+        });
+
+        for (const commande of panier) {
+            commande.status = true;
+            await commande.save();
+        }
+
+        return res.status(200).json({ error: false, message: "Panier validé avec succès." });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};
+
+exports.noterProduct = async (req, res) => {
+    try {
+        const headerAuth = req.headers["authorization"];
+        const userId = jwtUtils.getUserId(headerAuth);
+        const productId = req.params.id;
+
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            return res.status(404).json({ error: true, message: "Produit n'est pas disponible." });
+        }
+
+        const { note, avis } = req.body;
+
+        const newNote = await Note.create({
+            id: uuidv1(),
+            userId: userId,
+            productId: productId,
+            note: note,
+            avis: avis,
+        });
+
+        return res.status(201).json({ error: false, message: "Produit noté avec succès", note: newNote });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+};

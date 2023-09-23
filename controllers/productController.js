@@ -1,9 +1,10 @@
 require('dotenv').config();
 const { v1: uuidv1 } = require('uuid');
-const { Product, Categorie } = require("../models");
+const { Product, Categorie, Note } = require("../models");
 const productMulter = require("../middlewares/multer");
+const sequelize = require('sequelize');
 
-exports.addProduit = async (req, res, next) => {
+exports.addProduit = async (req, res) => {
     try {
         const { nom, description, prix, quantite, categorie } = req.body;
         const productFound = await Product.findOne({ where: { nom: nom } })
@@ -22,30 +23,29 @@ exports.addProduit = async (req, res, next) => {
                 console.error(err);
                 return res.status(400).json({ error: true, message: 'Erreur lors du téléchargement de l\'image.' });
             }
-            const imageUrls = "";
 
-            await Product.create({
-                id: uuidv1(),
-                nom,
-                description,
-                prix,
-                quantite,
-                url: req.file ? `${req.protocol}://${req.get('host')}/images/products/${file.filename}` : "",
-                categorieId: foundCategory.id,
-            });
+            const imageUrls = [];
 
             // if (req.files && req.files.length > 0) {
             //     for (const file of req.files) {
-            //         const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}` + ',';
-            //         imageUrls += imageUrl
-            //         //    await imageUrls.push(imageUrl);
+            //         const imageUrl = `${req.protocol}://${req.get('host')}/images/products/${file.filename}`;
+            //         imageUrls.push(imageUrl);
             //     }
             // } else {
             //     console.log("Pas d'image")
             // }
 
+            const newProduct = await Product.create({
+                id: uuidv1(),
+                nom,
+                description,
+                prix,
+                quantite,
+                url: req.fil ? `${req.protocol}://${req.get('host')}/images/products/${file.filename}` : "",
+                categorieId: foundCategory.id,
+            });
 
-            return res.status(200).json({ error: false, message: "Produit ajouté avec succès" });
+            return res.status(200).json({ error: false, message: "Produit ajouté avec succès", product: newProduct });
         });
     } catch (error) {
         console.log(error)
@@ -55,19 +55,26 @@ exports.addProduit = async (req, res, next) => {
 
 exports.getProducts = async (req, res) => {
     try {
-        const page = req.query.page || 1;
-        const limit = req.query.limit || 10;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
         const products = await Product.findAndCountAll({
             limit: limit,
             offset: offset,
+            attributes: ['id', 'nom', 'description', 'prix', 'quantite', 'url'],
             include: [
                 {
                     model: Categorie,
-                    as: 'categorie',
-                    attributes: ['nom'],
-                }
+                    attributes: ['nom', 'description'],
+                },
+                {
+                    model: Note,
+                    attributes: [
+                        [sequelize.fn('AVG', sequelize.col('note')), 'note'],
+                    ],
+                    group: ['productId'],
+                },
             ],
         });
 
@@ -101,7 +108,7 @@ exports.getOneProduct = async (req, res) => {
     }
 };
 
-exports.updateProduit = async (req, res, next) => {
+exports.updateProduit = async (req, res) => {
     try {
         const { nom, description, prix, quantite, categorie } = req.body;
         const foundCategory = await Categorie.findOne({ where: { nom: categorie } });
@@ -115,8 +122,6 @@ exports.updateProduit = async (req, res, next) => {
         if (!produit) {
             return res.status(404).json({ error: true, message: "Produit non trouvé" });
         }
-
-
 
         productMulter(req, res, async (err) => {
             if (err) {
@@ -152,18 +157,32 @@ exports.updateProduit = async (req, res, next) => {
     }
 };
 
-exports.deleteProduit = async (req, res, next) => {
+exports.deleteProduit = async (req, res) => {
+    const t = await sequelize.transaction(); 
+
     try {
-        const produit = await Product.findByPk(req.params.id);
+        const produit = await Product.findByPk(req.params.id, { transaction: t });
 
         if (!produit) {
+            await t.rollback();
             return res.status(404).json({ error: true, message: "Produit non trouvé" });
         }
 
-        await produit.destroy();
+        await Note.destroy({
+            where: {
+                productId: produit.id
+            },
+            transaction: t
+        });
 
-        return res.status(200).json({ error: false, message: "Produit supprimé avec succès" });
+       
+        await produit.destroy({ transaction: t });
+
+        await t.commit(); 
+
+        return res.status(200).json({ error: false, message: "Produit et notes associées supprimés avec succès" });
     } catch (error) {
+        await t.rollback();
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }

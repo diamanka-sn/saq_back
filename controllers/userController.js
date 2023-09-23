@@ -56,12 +56,12 @@ exports.inscription = async (req, res) => {
             telephone,
             isAdmin: false
         });
-        var s = {
+        const s = {
             userId: u.id,
             email: u.email,
             token: jwtUtils.generateTokenForUser(u)
         }
-        return res.status(200).json({ error: false, s});
+        return res.status(200).json({ error: false, s });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur inatendu, veuillez reessayer" });
@@ -155,15 +155,15 @@ exports.updateUser = async (req, res) => {
     try {
         const user = await User.findByPk(userId);
 
-        user.prenom = req.body.prenom ? req.body.prenom : user.prenom;
-        user.nom = req.body.nom;
-        user.email = req.body.email;
-        user.sexe = req.body.sexe;
-        user.telephone = req.body.telephone;
-        user.date_naissance = req.body.date_naissance;
-        user.rue = req.body.rue;
-        user.ville = req.body.ville;
-        user.region = req.body.region;
+        user.prenom = req.body.prenom ? req.body.prenom : user.prenom
+        user.nom = req.body.nom ? req.body.nom : user.nom
+        user.email = req.body.email ? req.body.email : user.email
+        user.sexe = req.body.sexe ? req.body.sexe : user.sexe
+        user.telephone = req.body.telephone ? req.body.telephone : user.telephone
+        user.date_naissance = req.body.date_naissance ? req.body.date_naissance : user.date_naissance
+        user.rue = req.body.rue ? req.body.rue : user.rue
+        user.ville = req.body.ville ? req.body.ville : user.ville
+        user.region = req.body.region ? req.body.region : user.region
 
         const updatedUser = await user.save();
 
@@ -184,7 +184,7 @@ exports.passwordOublié = async (req, res) => {
         if (email) {
             user = await User.findOne({
                 where: {
-                    email: email,
+                    email: email.trim()
                 },
             });
         } else if (telephone) {
@@ -264,15 +264,24 @@ exports.verifierCode = async (req, res) => {
         return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });
     }
 };
-
 exports.allUser = async (req, res) => {
     try {
-        const users = await User.findAll();
-        return res.status(201).json(users);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const users = await User.findAll({
+            limit: limit,
+            offset: offset,
+        });
+
+        return res.status(200).json(users);
     } catch (err) {
+        console.error(err);
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
 };
+
 
 exports.addProfile = async (req, res) => {
     const userId = jwtUtils.getUserId(req.headers["authorization"]);
@@ -301,3 +310,19 @@ exports.addProfile = async (req, res) => {
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
 };
+
+exports.supprimerPhoto = async (req, res) => {
+    const userId = jwtUtils.getUserId(req.headers["authorization"]);
+
+    try {
+        const user = await User.findByPk(userId);
+
+        user.image = null
+
+        await user.save()
+        return res.status(200).json({ error: false, message: "Profil supprimer avec succés" })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: true, message: "Erreur serveur" });
+    }
+}

@@ -1,14 +1,29 @@
-const app = require('./app')
-const http = require('http')
+const http = require("http");
+const WebSocket = require("ws");
+
+const app = require('./app');
 const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
+const utilisateursEnLigne = new Set();
 const ipAdress = '127.0.0.1';
-const port = 3000;
+wss.on("connection", (ws) => {
+  utilisateursEnLigne.add(ws);
 
-app.set('port', process.env.PORT || 3000, ipAdress)
+  ws.on("close", () => {
+    utilisateursEnLigne.delete(ws);
+  });
+});
 
-server.listen(process.env.PORT || 3000, ipAdress)
+app.get("/utilisateurs-en-ligne", (req, res) => {
+  const listeUtilisateurs = Array.from(utilisateursEnLigne).map((ws) => {
+    return { id: ws.id }; 
+  });
 
-server.listen(port, ipAdress, () => {
-  console.log(`Server running at http://${ipAdress}:${port}/`);
+  res.json(listeUtilisateurs);
+});
+
+const port = process.env.PORT || 3000;
+server.listen(port,ipAdress, () => {
+  console.log(`Serveur en cours d'exécution sur le port ${port}`);
 });

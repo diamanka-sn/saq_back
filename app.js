@@ -3,7 +3,6 @@ const app = express();
 const bodyParse = require("body-parser");
 const path = require("path");
 const cors = require("cors");
-const cron = require("node-cron");
 const auth = require('./middlewares/auth')
 const routesUtilisateur = require("./routes/routeUser");
 const routesProduct = require("./routes/routeProduct");

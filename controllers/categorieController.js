@@ -1,10 +1,9 @@
 const { v1: uuidv1 } = require('uuid');
 const { Product, Categorie } = require("../models");
 
-
 exports.addCategorie = async (req, res) => {
     try {
-       
+
         const { nom, description } = req.body;
 
         const existingCategory = await Categorie.findOne({ where: { nom } });
@@ -19,7 +18,7 @@ exports.addCategorie = async (req, res) => {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur" });
     }
-};
+}
 
 exports.updateCategorie = async (req, res) => {
     const categoryId = req.params.id;
@@ -45,35 +44,33 @@ exports.updateCategorie = async (req, res) => {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur." });
     }
-};
+}
 
 exports.getOneCategory = async (req, res) => {
     const categoryId = req.params.id;
     try {
-        const category = await Categorie.findByPk(categoryId, {
-            include: {
-                model: Product,
-                as: 'products',
-            },
-        });
+        const category = await Categorie.findByPk(categoryId);
 
-        if (!category)
+        if (!category) {
             return res.status(404).json({ error: true, message: "Catégorie non trouvée" });
+        }
 
         return res.status(200).json({ error: false, category });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur." });
     }
-};
+}
 
 exports.getCategories = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
         const categories = await Categorie.findAll({
-            include: {
-                model: Product,
-                as: 'products',
-            },
+            limit: limit,
+            offset: offset,
         });
 
         return res.status(200).json({ error: false, categories });
@@ -81,4 +78,4 @@ exports.getCategories = async (req, res) => {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur serveur." });
     }
-};
+}
