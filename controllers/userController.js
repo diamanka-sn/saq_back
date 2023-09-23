@@ -3,8 +3,6 @@ const bcrypt = require("bcrypt");
 const jwtUtils = require("../utils/jwt.utils");
 const models = require("../models");
 const { Op } = require('sequelize');
-const crypto = require('crypto');
-const Joi = require('joi');
 const messages = require("../utils/messages");
 const { v1: uuidv1 } = require('uuid');
 const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
@@ -19,7 +17,6 @@ const min = 100000;
 const max = 999999;
 
 const profileMulter = require('../middlewares/profileMulter')
-
 
 exports.inscription = async (req, res) => {
     try {
