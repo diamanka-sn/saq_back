@@ -1,11 +1,12 @@
 const express = require('express')
 const routes = express.Router()
 const controller = require('../controllers/categorieController')
+const authAdmin = require('../middlewares/authAdmin')
 
-routes.post("/", controller.addCategorie)
-routes.get("/", controller.getCategories)
-routes.get("/:id", controller.getOneCategory)
-routes.put("/:id", controller.updateCategorie)
+routes.post("/", authAdmin, controller.addCategorie)
+routes.get("/", authAdmin, controller.getCategories)
+routes.get("/:id", authAdmin, controller.getOneCategory)
+routes.put("/:id", authAdmin, controller.updateCategorie)
 
 
 module.exports = routes

@@ -10,7 +10,7 @@ const routesCategories = require("./routes/routeCategorie");
 const routesOrder = require("./routes/routeOrder");
 const routesNote = require("./routes/routeNote");
 const authAdmin = require("./middlewares/authAdmin");
-
+const compression = require('compression');
 
 app.use(cors());
 app.use(express.json());
@@ -26,6 +26,7 @@ app.use((req, res, next) => {
   );
   next();
 });
+app.use(compression())
 app.use(bodyParse.json());
 app.use(express.urlencoded({ extended: true }));
 
