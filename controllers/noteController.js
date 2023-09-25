@@ -67,6 +67,11 @@ exports.getAllNotes = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const notes = await Note.findAndCountAll({
+            include: [
+                {
+                    model: Product
+                }
+            ],
             limit: limit,
             offset: offset,
         });
