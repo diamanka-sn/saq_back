@@ -17,7 +17,7 @@ const min = 100000;
 const max = 999999;
 
 const profileMulter = require('../middlewares/profileMulter')
-
+const codesDeReinitialisation = {}
 exports.inscription = async (req, res) => {
     try {
         const { email, prenom, nom, sexe, date_naissance, password, rue, ville, region, telephone } = req.body;
@@ -70,17 +70,20 @@ exports.inscription = async (req, res) => {
 
 exports.login = async (req, res) => {
     const { email, password, telephone } = req.body;
-
+    if (!email && !telephone) {
+        return res.status(400).json({ error: true, message: 'L\'e-mail ou le numéro de téléphone est requis' });
+    }
     try {
         let user;
 
-        if (email) {
-            user = await User.findOne({
-                where: { email }
-            });
-        } else if (telephone) {
+        if (telephone) {
             user = await User.findOne({
                 where: { telephone }
+            });
+
+        } else if (email) {
+            user = await User.findOne({
+                where: { email }
             });
         }
 
@@ -95,8 +98,19 @@ exports.login = async (req, res) => {
         }
 
         return res.status(200).json({
+            error: false,
             userId: user.id,
             email: user.email,
+            isAdmin: user.isAdmin,
+            telephone: user.telephone,
+            prenom: user.prenom,
+            nom: user.nom,
+            rue: user.rue,
+            ville: user.ville,
+            region: user.region,
+            sexe: user.sexe,
+            date_naissance: user.date_naissance,
+            image: user.image,
             token: jwtUtils.generateTokenForUser(user)
         });
 
@@ -221,7 +235,7 @@ exports.passwordOublié = async (req, res) => {
                 body: `SAQ S U N U G A L \nVotre code de réinitialisation de mot de passe : ${code}`,
                 from: process.env.TWILIO_PHONE_NUMBER,
                 to: telephone,
-                timeout: 60000,
+                timeout: 70000,
             });
         }
 
@@ -234,13 +248,19 @@ exports.passwordOublié = async (req, res) => {
 
 exports.verifierCode = async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { email, code, telephone } = req.body;
 
-        const user = await User.findOne({
-            where: {
-                email: email,
-            },
-        });
+        let user;
+
+        if (telephone) {
+            user = await User.findOne({
+                where: { telephone }
+            });
+        } else if (email) {
+            user = await User.findOne({
+                where: { email }
+            });
+        }
 
         if (!user) {
             return res.status(404).json({ error: true, message: 'Utilisateur non trouvé' });
@@ -249,7 +269,7 @@ exports.verifierCode = async (req, res) => {
         const storedCode = codesDeReinitialisation[user.id];
 
         if (!storedCode || storedCode.code !== code) {
-            return res.status(404).json({ error: true, message: 'Code de réinitialisation incorrect' });
+            return res.status(403).json({ error: true, message: 'Code de réinitialisation incorrect' });
         }
 
         const now = Date.now();
@@ -258,12 +278,49 @@ exports.verifierCode = async (req, res) => {
             return res.status(401).json({ error: true, message: 'Code de réinitialisation expiré' });
         }
 
-        return res.status(200).json({ error: false, message: 'Code de réinitialisation valide' });
+        return res.status(200).json({ error: false, user: user });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });
     }
 };
+
+exports.resetPassword = async (req, res) => {
+    const { email, telephone, nouveau } = req.body;
+
+    try {
+        let user;
+
+        if (email) {
+            user = await User.findOne({
+                where: {
+                    email: email.trim()
+                },
+            });
+        } else if (telephone) {
+            user = await User.findOne({
+                where: {
+                    telephone: telephone.trim(),
+                },
+            });
+        } else {
+            return res.status(400).json({ error: true, message: 'Veuillez fournir une adresse e-mail ou un numéro de téléphone' });
+        }
+
+        if (!user) {
+            return res.status(404).json({ error: true, message: 'Cet utilisateur n\'existe pas' });
+        }
+
+        const hashedPassword = await bcrypt.hash(nouveau.trim(), 8);
+        await User.update({ password: hashedPassword }, { where: { id: user.id } });
+
+        return res.status(200).json({ error: false, message: 'Mot de passe réinitialisé avec succès' });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: true, message: 'Une erreur s\'est produite lors de la réinitialisation du mot de passe' });
+    }
+}
+
 exports.allUser = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
