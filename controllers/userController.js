@@ -34,9 +34,9 @@ exports.inscription = async (req, res) => {
 
         if (user) {
             if (user.email === email) {
-                return res.status(200).json({ error: true, message: errorMessages.emailInUse });
+                return res.status(200).json({ error: true, message: errorMessages.emailInUse, errorEmail: true });
             } else {
-                return res.status(200).json({ error: true, message: errorMessages.phoneInUse });
+                return res.status(200).json({ error: true, message: errorMessages.phoneInUse, errorTelephone: true });
             }
         }
 
@@ -217,7 +217,7 @@ exports.passwordOublié = async (req, res) => {
 
         // const code = crypto.randomBytes(4).toString('hex');
         const code = Math.floor(Math.random() * (max - min + 1)) + min;
-        const expiration = Date.now() + 15 * 60 * 1000;
+        const expiration = Date.now() + 5 * 60 * 1000;
 
         codesDeReinitialisation[user.id] = {
             code: code,
@@ -225,21 +225,27 @@ exports.passwordOublié = async (req, res) => {
         };
 
         const message = `<p>Bonjour ${user.prenom} ${user.nom}, </p>
-        <p>Votre code de réinitialisation de mot de passe : <b>${code}</b></p>
-        <p>Cordialement,</p> `;
+        <p>Nous vous informons que votre code de réinitialisation de mot de passe a été généré avec succès :</p>
+        <p><strong>${code}</strong></p>
+        <p>Ce code est valable pendant 5 minutes à des fins de sécurité.</p>
+        <p>En cas de questions ou d'assistance supplémentaire, n'hésitez pas à nous contacter. Nous sommes là pour vous aider.</p>
+        <p>Cordialement,</p>
+        `;
 
         if (email) {
-            await envoyer.sendMail(user.email, '[Mot de passe] Code de réinitialisation', message);
+            const envoie = await envoyer.sendMail(user.email, '[Mot de passe] Code de réinitialisation', message);
+            return res.status(200).json(envoie);
+
         } else if (telephone) {
             await client.messages.create({
-                body: `SAQ S U N U G A L \nVotre code de réinitialisation de mot de passe : ${code}`,
+                body: `SAQ S U N U G A L \nVotre code de réinitialisation de mot de passe : ${code}.\nCe code est valable pendant 5 minutes à des fins de sécurité.`,
                 from: process.env.TWILIO_PHONE_NUMBER,
-                to: telephone,
+                to: '+221' + telephone,
                 timeout: 70000,
             });
+            return res.status(200).json({ error: false, message: 'Un code de réinitialisation a été envoyé' });
         }
 
-        return res.status(200).json({ error: false, message: 'Un code de réinitialisation a été envoyé' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: 'Erreur au niveau du serveur' });

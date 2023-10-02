@@ -17,7 +17,6 @@ module.exports = (sequelize, DataTypes) => {
       })
       models.Product.hasMany(models.Order)
       models.Product.hasMany(models.Note)
-      models.Product.hasMany(models.Image)
     }
   }
   Product.init({
@@ -27,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.STRING,
     prix: DataTypes.INTEGER,
     quantite: DataTypes.INTEGER,
-    url: DataTypes.STRING
+    image: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Product',

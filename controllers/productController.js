@@ -1,8 +1,7 @@
 require('dotenv').config();
 const { v1: uuidv1 } = require('uuid');
 const { Product, Categorie, Note, Image } = require("../models");
-const productMulter = require("../middlewares/multer");
-const sequelize = require('sequelize');
+const productMulter = require("../middlewares/productMulter");
 
 exports.addProduit = async (req, res) => {
     try {
@@ -29,16 +28,9 @@ exports.addProduit = async (req, res) => {
                 description,
                 prix,
                 quantite,
+                image: req.file ? `${req.protocol}://${req.get('host')}/images/products/${file.filename}` : '',
                 categorieId: foundCategory.id,
             });
-
-            for (const file of req.files) {
-                await Image.create({
-                    id: uuidv1(),
-                    productId: newProduct.id,
-                    url: `${req.protocol}://${req.get('host')}/images/products/${file.filename}`,
-                });
-            }
 
             return res.status(200).json({ error: false, message: "Produit ajouté avec succès", product: newProduct });
         });

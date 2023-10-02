@@ -25,9 +25,8 @@ exports.sendMail = async (destinataire, objet, messages) => {
 
         console.log('Mail envoyé :', info);
 
-        return { success: true, message: 'Mail envoyé avec succès' };
+        return { error: false, message: 'Mail envoyé avec succès' };
     } catch (error) {
-        console.error('Erreur lors de l\'envoi du mail :', error);
-        return { success: false, message: 'Erreur lors de l\'envoi du mail' };
+        return { error: true, message: 'Erreur lors de l\'envoi du mail' };
     }
 }
