@@ -18,6 +18,7 @@ const max = 999999;
 
 const profileMulter = require('../middlewares/profileMulter')
 const codesDeReinitialisation = {}
+
 exports.inscription = async (req, res) => {
     try {
         const { email, prenom, nom, sexe, date_naissance, password, rue, ville, region, telephone } = req.body;
@@ -56,12 +57,23 @@ exports.inscription = async (req, res) => {
             telephone,
             isAdmin: false
         });
-        const s = {
+       
+        return res.status(200).json({
+            error: false,
             userId: u.id,
             email: u.email,
+            isAdmin: u.isAdmin,
+            telephone: u.telephone,
+            prenom: u.prenom,
+            nom: u.nom,
+            rue: u.rue,
+            ville: u.ville,
+            region: u.region,
+            sexe: u.sexe,
+            date_naissance: u.date_naissance,
+            image: u.image,
             token: jwtUtils.generateTokenForUser(u)
-        }
-        return res.status(200).json({ error: false, s });
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ error: true, message: "Erreur inatendu, veuillez reessayer" });
