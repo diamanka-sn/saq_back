@@ -357,7 +357,6 @@ exports.allUser = async (req, res) => {
     }
 };
 
-
 exports.addProfile = async (req, res) => {
     const userId = jwtUtils.getUserId(req.headers["authorization"]);
 

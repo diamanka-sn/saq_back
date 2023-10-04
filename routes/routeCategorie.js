@@ -4,7 +4,7 @@ const controller = require('../controllers/categorieController')
 const authAdmin = require('../middlewares/authAdmin')
 
 routes.post("/", authAdmin, controller.addCategorie)
-routes.get("/", authAdmin, controller.getCategories)
+routes.get("/",controller.getCategories)
 routes.get("/:id", authAdmin, controller.getOneCategory)
 routes.put("/:id", authAdmin, controller.updateCategorie)
 

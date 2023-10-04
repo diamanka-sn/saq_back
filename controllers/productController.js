@@ -2,7 +2,7 @@ require('dotenv').config();
 const { v1: uuidv1 } = require('uuid');
 const { Product, Categorie, Note, Image } = require("../models");
 const productMulter = require("../middlewares/productMulter");
-
+const { sequelize } = require('../models')
 exports.addProduit = async (req, res) => {
     try {
         const { nom, description, prix, quantite, categorie } = req.body;
@@ -43,7 +43,7 @@ exports.addProduit = async (req, res) => {
 exports.getProducts = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 8;
         const offset = (page - 1) * limit;
 
         const products = await Product.findAndCountAll({
@@ -54,18 +54,7 @@ exports.getProducts = async (req, res) => {
                 {
                     model: Categorie,
                     attributes: ['nom', 'description'],
-                },
-                {
-                    model: Note,
-                    attributes: [
-                        [sequelize.fn('AVG', sequelize.col('note')), 'note'],
-                    ],
-                    group: ['productId'],
-                },
-                {
-                    model: Image, // Inclure le modèle Image pour récupérer les images associées aux produits
-                    attributes: ['url'], // Inclure uniquement l'URL de l'image
-                },
+                }
             ],
         });
 

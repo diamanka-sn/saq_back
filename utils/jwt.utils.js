@@ -14,7 +14,6 @@ module.exports = {
                 expiresIn: '48h'
             })
     },
-
     parseAuthorization: function (authorizationHeader) {
         if (authorizationHeader == null) {
             return null;
@@ -38,13 +37,5 @@ module.exports = {
             }
         }
         return userId;
-    },
-    validateUser: function (user) {
-        const schema = Joi.object({
-            email: Joi.string().email().required(),
-            statut: Joi.string().valid('admin', 'client').required()
-        });
-
-        return schema.validate(user);
     }
 }

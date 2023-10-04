@@ -6,7 +6,7 @@ const auth = require('../middlewares/auth')
 
 routes.get("/", auth,controller.getPanier)
 routes.get("/historrique",auth, controller.getHistorique)
-routes.post("/:id",auth, controller.ajouterPanier)
+routes.post("/",auth, controller.ajouterPanier)
 routes.post("/:id",auth, controller.validerPanier)
 routes.put("/:id",auth, controller.modifierPanier)
 routes.post("/noter",auth, controller.noterProduct)

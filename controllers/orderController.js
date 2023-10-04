@@ -1,25 +1,37 @@
 const { v1: uuidv1 } = require('uuid');
 const { Product, Order } = require("../models");
-
+var jwtUtils = require("../utils/jwt.utils");
 
 exports.ajouterPanier = async (req, res) => {
     try {
         const headerAuth = req.headers["authorization"];
         const userId = jwtUtils.getUserId(headerAuth);
-        const productId = req.params.id;
+        const productId = req.body.id
 
         const product = await Product.findByPk(productId);
         if (!product) {
             return res.status(404).json({ error: true, message: "Produit n'est pas disponible." });
         }
-
-        const order = await Order.create({
-            id: uuidv1(),
-            productId: productId,
-            userId: userId,
-            ...req.body,
-            status: false
+        const productInOrder = await Order.findOne({
+            where: {
+                ProductId: product.id,
+                UserId: userId,
+                status: false
+            }
         });
+        let order
+        if (productInOrder) {
+            order = await productInOrder.update({ quantite: req.body.quantite });
+        } else {
+            order = await Order.create({
+                id: uuidv1(),
+                ProductId: req.body.id,
+                UserId: userId,
+                quantite: req.body.quantite,
+                status: false
+            });
+        }
+
 
         return res.status(201).json({ error: false, message: "Produit ajouté au panier avec succès", order: order });
     } catch (error) {
@@ -32,14 +44,14 @@ exports.getPanier = async (req, res) => {
     try {
         const headerAuth = req.headers["authorization"];
         const userId = jwtUtils.getUserId(headerAuth);
-
+        
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
         const panier = await Order.findAndCountAll({
             where: {
-                userId: userId,
+                UserId: userId,
                 status: false
             },
             include: [
@@ -66,8 +78,8 @@ exports.modifierPanier = async (req, res) => {
 
         const commande = await Order.findOne({
             where: {
-                userId: userId,
-                productId: productId,
+                UserId: userId,
+                ProductId: productId,
                 status: false
             }
         });
@@ -99,8 +111,8 @@ exports.supprimerPanier = async (req, res) => {
 
         const order = await Order.findOne({
             where: {
-                userId: userId,
-                productId: productId,
+                UserId: userId,
+                ProductId: productId,
                 status: false
             }
         });
@@ -129,7 +141,7 @@ exports.getHistorique = async (req, res) => {
 
         const historiques = await Order.findAndCountAll({
             where: {
-                userId: userId,
+                UserId: userId,
                 status: true
             },
             include: [
@@ -155,7 +167,7 @@ exports.validerPanier = async (req, res) => {
 
         const panier = await Order.findAll({
             where: {
-                userId: userId,
+                UserId: userId,
                 status: false
             }
         });

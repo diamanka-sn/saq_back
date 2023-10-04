@@ -37,7 +37,7 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use("/user", routesUtilisateur);
 app.use("/product", routesProduct);
-app.use("/categorie", authAdmin, routesCategories);
+app.use("/categorie", routesCategories);
 app.use("/note", auth, routesNote)
 app.use("/order", auth, routesOrder)
 
