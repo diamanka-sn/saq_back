@@ -1,6 +1,6 @@
 const { v1: uuidv1 } = require('uuid');
 const { Product, Order } = require("../models");
-var jwtUtils = require("../utils/jwt.utils");
+const jwtUtils = require("../utils/jwt.utils");
 
 exports.ajouterPanier = async (req, res) => {
     try {
@@ -44,7 +44,6 @@ exports.getPanier = async (req, res) => {
     try {
         const headerAuth = req.headers["authorization"];
         const userId = jwtUtils.getUserId(headerAuth);
-        
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;

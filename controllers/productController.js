@@ -3,6 +3,7 @@ const { v1: uuidv1 } = require('uuid');
 const { Product, Categorie, Note, Image } = require("../models");
 const productMulter = require("../middlewares/productMulter");
 const { sequelize } = require('../models')
+
 exports.addProduit = async (req, res) => {
     try {
         const { nom, description, prix, quantite, categorie } = req.body;

@@ -9,11 +9,7 @@ const routesProduct = require("./routes/routeProduct");
 const routesCategories = require("./routes/routeCategorie");
 const routesOrder = require("./routes/routeOrder");
 const routesNote = require("./routes/routeNote");
-const authAdmin = require("./middlewares/authAdmin");
 const compression = require('compression');
-
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./swaggerConfig');
 
 app.use(cors());
 app.use(express.json());
@@ -32,7 +28,6 @@ app.use((req, res, next) => {
 app.use(compression())
 app.use(bodyParse.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/images", express.static(path.join(__dirname, "images")));
 
 app.use("/user", routesUtilisateur);
